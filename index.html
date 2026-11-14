@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sideline NFL Model</title>
+<meta name="description" content="NFL spreads and totals from a play-by-play model, compared with the betting market. Power ratings, QB and roster ratings, live scores and an honest track record.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2307090d'/%3E%3Cpath d='M9 6v9a7 7 0 0 0 14 0V6' stroke='%233ee08f' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3Cpath d='M16 22v6' stroke='%233ee08f' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#07090d;--bg2:#0b0f15;--panel:#10151d;--panel2:#151b25;--line:rgba(255,255,255,.07);--line2:rgba(255,255,255,.13);
+  --ink:#eef2f6;--ink2:#a9b3c1;--mute:#6f7b8b;--turf:#3ee08f;--turf-d:rgba(62,224,143,.14);--amber:#ffb547;--amber-d:rgba(255,181,71,.14);
+  --red:#ff5d5d;--blue:#6aa7ff;--glow:rgba(62,224,143,.08);--shadow:0 1px 0 rgba(255,255,255,.04) inset,0 10px 30px rgba(0,0,0,.35);
+  --display:"Barlow Condensed",system-ui,sans-serif;--body:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  color-scheme:dark}
+:root[data-theme="light"]{
+  --bg:#eef1f5;--bg2:#e6eaf0;--panel:#ffffff;--panel2:#f5f7fa;--line:rgba(10,20,40,.08);--line2:rgba(10,20,40,.16);
+  --ink:#0d131c;--ink2:#3d4a5c;--mute:#6b7787;--turf:#0d9b5a;--turf-d:rgba(13,155,90,.1);--amber:#c27400;--amber-d:rgba(194,116,0,.1);
+  --red:#d33030;--blue:#2563eb;--glow:rgba(13,155,90,.06);--shadow:0 1px 2px rgba(10,20,40,.06),0 8px 24px rgba(10,20,40,.06);color-scheme:light}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){
+  --bg:#eef1f5;--bg2:#e6eaf0;--panel:#ffffff;--panel2:#f5f7fa;--line:rgba(10,20,40,.08);--line2:rgba(10,20,40,.16);
+  --ink:#0d131c;--ink2:#3d4a5c;--mute:#6b7787;--turf:#0d9b5a;--turf-d:rgba(13,155,90,.1);--amber:#c27400;--amber-d:rgba(194,116,0,.1);
+  --red:#d33030;--blue:#2563eb;--glow:rgba(13,155,90,.06);--shadow:0 1px 2px rgba(10,20,40,.06),0 8px 24px rgba(10,20,40,.06);color-scheme:light}}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--body);-webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(1200px 500px at 15% -10%,var(--glow),transparent 60%),radial-gradient(900px 400px at 100% 0%,rgba(106,167,255,.06),transparent 60%);background-attachment:fixed}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.wrap{max-width:1240px;margin:0 auto;padding:0 20px}
+/* top bar */
+.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:14px;height:58px}
+.brand{display:flex;align-items:center;gap:10px;font:800 22px/1 var(--display);letter-spacing:.06em;text-transform:uppercase}
+.brand svg{width:26px;height:26px}.brand em{font-style:normal;color:var(--turf)}
+.pill{font:600 11px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);border:1px solid var(--line2);border-radius:999px;padding:6px 10px;white-space:nowrap}
+.tabs{display:flex;gap:2px;margin-left:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:3px}
+.tabs button{all:unset;cursor:pointer;font:700 13px/1 var(--display);letter-spacing:.09em;text-transform:uppercase;color:var(--ink2);padding:9px 14px;border-radius:9px;transition:.15s}
+.tabs button:hover{color:var(--ink)}.tabs button.on{background:var(--panel2);color:var(--ink);box-shadow:inset 0 -2px 0 var(--turf)}
+.icon-btn{all:unset;cursor:pointer;width:34px;height:34px;display:grid;place-items:center;border-radius:10px;border:1px solid var(--line);color:var(--ink2)}
+.icon-btn:hover{color:var(--ink);border-color:var(--line2)}
+/* ticker */
+.ticker{border-bottom:1px solid var(--line);background:var(--bg2);overflow:hidden;white-space:nowrap;position:relative}
+.ticker::before,.ticker::after{content:"";position:absolute;top:0;bottom:0;width:60px;z-index:1}
+.ticker::before{left:0;background:linear-gradient(90deg,var(--bg2),transparent)}.ticker::after{right:0;background:linear-gradient(-90deg,var(--bg2),transparent)}
+.ticker-track{display:inline-flex;gap:28px;padding:9px 0;animation:tick 60s linear infinite}
+.ticker:hover .ticker-track{animation-play-state:paused}
+.tk{font:600 12px/1 var(--body);color:var(--ink2);display:inline-flex;gap:8px;align-items:center}.tk b{color:var(--ink)}.tk .e{color:var(--amber)}
+@keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.ticker-track{animation:none}}
+/* hero */
+.hero>*,.rank-grid>*{min-width:0}.hero{padding:42px 0 26px;display:grid;grid-template-columns:1.1fr 1fr;gap:28px;align-items:end}
+.kicker{font:700 12px/1 var(--display);letter-spacing:.22em;text-transform:uppercase;color:var(--turf);display:flex;align-items:center;gap:10px}
+.kicker::before{content:"";width:22px;height:2px;background:var(--turf)}
+h1{font:800 clamp(44px,6.4vw,82px)/.9 var(--display);text-transform:uppercase;letter-spacing:-.01em;margin:14px 0 14px}
+h1 span{color:transparent;-webkit-text-stroke:1.5px var(--ink2)}
+.lede{color:var(--ink2);max-width:520px;margin:0;font-size:15px}
+.spot{background:linear-gradient(160deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:18px;padding:18px 20px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.spot::after{content:"";position:absolute;inset:auto -40px -60px auto;width:220px;height:220px;border-radius:50%;background:radial-gradient(var(--amber-d),transparent 70%)}
+.spot .lbl{font:700 11px/1 var(--display);letter-spacing:.2em;text-transform:uppercase;color:var(--amber)}
+.spot .mu{display:flex;align-items:center;gap:12px;margin:12px 0 14px;font:800 30px/1 var(--display);text-transform:uppercase}
+.spot .mu small{font:600 14px var(--body);color:var(--mute);text-transform:none}
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;position:relative;z-index:1}
+.trio div{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.trio small{display:block;font:600 10px/1.2 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin-bottom:6px}
+.trio b{font:700 22px/1.1 var(--mono);white-space:nowrap}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:6px 0 30px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.tile small{display:block;font:600 10px/1.2 var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+.tile b{display:block;font:700 26px/1.1 var(--mono);margin-top:8px}.tile span{color:var(--ink2);font-size:12px}
+/* section */
+.sec-h{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:6px 0 16px}
+h2{font:800 34px/1 var(--display);text-transform:uppercase;margin:0;letter-spacing:.01em}
+.sub{color:var(--ink2);margin:6px 0 0;max-width:640px}
+.controls{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chip{all:unset;cursor:pointer;font:600 12px/1 var(--body);padding:8px 12px;border-radius:999px;border:1px solid var(--line2);color:var(--ink2);transition:.15s}
+.chip:hover{color:var(--ink)}.chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+select.chip{appearance:none;padding-right:26px;background:linear-gradient(45deg,transparent 50%,var(--ink2) 50%) calc(100% - 13px) 50%/5px 5px no-repeat,linear-gradient(-45deg,transparent 50%,var(--ink2) 50%) calc(100% - 9px) 50%/5px 5px no-repeat}
+select.chip option{background:var(--panel);color:var(--ink)}
+/* game cards */
+.games{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(360px,100%),1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);position:relative;transition:transform .15s,border-color .15s}
+.card:hover{transform:translateY(-2px);border-color:var(--line2)}
+.card .strip{height:4px;display:flex}.card .strip i{flex:1}
+.cardin{padding:14px 16px 14px}
+.meta{display:flex;justify-content:space-between;align-items:center;font:500 12px var(--body);color:var(--mute);gap:8px}
+.meta .st{display:inline-flex;align-items:center;gap:6px;font:700 11px/1 var(--display);letter-spacing:.14em;text-transform:uppercase}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--red);box-shadow:0 0 0 0 rgba(255,93,93,.6);animation:pulse 1.6s infinite}
+@keyframes pulse{70%{box-shadow:0 0 0 8px rgba(255,93,93,0)}100%{box-shadow:0 0 0 0 rgba(255,93,93,0)}}
+.teams{margin:12px 0 10px;display:grid;gap:8px}
+.trow{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center}
+.badge{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font:800 15px/1 var(--display);letter-spacing:.04em;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+.badge.sm{width:28px;height:28px;border-radius:8px;font-size:12px}
+.tname{font:700 21px/1 var(--display);text-transform:uppercase;letter-spacing:.02em}
+.tname small{display:block;font:500 12px/1.3 var(--body);color:var(--mute);text-transform:none;letter-spacing:0;margin-top:3px}
+.score{font:700 26px/1 var(--mono)}.score.win{color:var(--ink)}.score.lose{color:var(--mute)}
+.wp{margin:4px 0 12px}.wp .bar{height:8px;border-radius:99px;overflow:hidden;display:flex;background:var(--bg2)}
+.wp .lbls{display:flex;justify-content:space-between;font:600 11px var(--body);color:var(--ink2);margin-top:5px}
+.gauge{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:10px 12px 8px;margin-bottom:10px}
+.gauge .gh{display:flex;justify-content:space-between;font:600 10px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.gauge svg{display:block;width:100%;height:auto;margin-top:4px}
+.gauge .gf{font:500 12px var(--body);color:var(--ink2);display:flex;justify-content:space-between;gap:8px}
+.gauge .gf b{color:var(--ink)}
+.stats3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.stats3 div{border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.stats3 small{display:block;font:600 10px/1.2 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin-bottom:4px}
+.stats3 b{font:700 15px/1.1 var(--mono)}.stats3 span{font:500 11px var(--body);color:var(--mute)}
+.edge-hot{background:var(--amber-d);border-color:color-mix(in srgb,var(--amber) 40%,transparent)!important}.edge-hot b{color:var(--amber)}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.tag{font:500 11px/1 var(--body);padding:5px 8px;border-radius:7px;background:var(--panel2);color:var(--ink2);border:1px solid var(--line)}
+.tag.warn{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 35%,transparent);background:var(--amber-d)}
+.tag.good{color:var(--turf);border-color:color-mix(in srgb,var(--turf) 35%,transparent);background:var(--turf-d)}
+.empty{padding:40px;text-align:center;color:var(--mute);border:1px dashed var(--line2);border-radius:16px}
+/* rankings */
+.rank-grid{display:grid;grid-template-columns:1.25fr 1fr;gap:16px;align-items:start}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+.panel-h{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)}
+.panel-h h3{margin:0;font:800 18px/1 var(--display);text-transform:uppercase;letter-spacing:.05em}
+.panel-h span{font:500 12px var(--body);color:var(--mute)}
+.rk{display:grid;grid-template-columns:28px 30px 1fr 150px 92px;gap:10px;align-items:center;padding:9px 16px;border-bottom:1px solid var(--line);cursor:pointer;transition:background .12s}
+.rk:hover{background:var(--panel2)}.rk.open{background:var(--panel2)}
+.rk .n{font:700 15px/1 var(--mono);color:var(--mute);text-align:right}
+.rk .nm{font:700 17px/1.05 var(--display);text-transform:uppercase;letter-spacing:.02em}
+.rk .nm small{display:block;font:500 11.5px var(--body);color:var(--mute);text-transform:none;letter-spacing:0;margin-top:2px}
+.pbar{position:relative;height:22px}
+.pbar .z{position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--line2)}
+.pbar .f{position:absolute;top:5px;height:12px;border-radius:4px}
+.pval{font:700 15px/1 var(--mono);text-align:right}
+.ranks{display:flex;gap:4px;justify-content:flex-end}
+.rp{font:600 10.5px/1 var(--mono);padding:4px 5px;border-radius:5px;background:var(--bg2);color:var(--ink2);min-width:38px;text-align:center}
+.rp.t{color:var(--turf);background:var(--turf-d)}.rp.b{color:var(--red);background:rgba(255,93,93,.1)}
+.detail{display:none;padding:4px 16px 16px 84px;border-bottom:1px solid var(--line);background:var(--panel2)}
+.detail.show{display:block}
+.units{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 18px;margin:8px 0 12px}
+.unit{display:grid;grid-template-columns:82px 1fr 54px;gap:8px;align-items:center;font:500 12px var(--body);color:var(--ink2)}
+.unit .ub{height:6px;border-radius:9px;background:var(--bg2);position:relative;overflow:hidden}
+.unit .ub i{position:absolute;top:0;bottom:0;border-radius:9px}
+.unit .ub::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--line2)}
+.unit .v{text-align:right;font:600 12px var(--mono);color:var(--ink)}
+.kp{font-size:12.5px;color:var(--ink2)}.kp b{color:var(--ink);font-weight:600}
+.scatter svg{display:block;width:100%;height:auto}
+.scatter text{font-family:var(--body)}
+.legend{padding:10px 16px 14px;color:var(--mute);font-size:12px}
+/* record */
+.chart svg{display:block;width:100%;height:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:10px 14px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font:600 10.5px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+td{font-family:var(--mono)}td.l,th.l{text-align:left;font-family:var(--body)}
+tr.champ td{color:var(--turf)}
+.method{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.method .panel{padding:18px}.method h3{font:800 19px/1.1 var(--display);text-transform:uppercase;margin:0 0 8px;letter-spacing:.03em}
+.method p,.method li{color:var(--ink2);font-size:13.5px;margin:0 0 8px}.method ul{padding-left:18px;margin:0}
+.step{font:700 11px/1 var(--display);letter-spacing:.2em;color:var(--turf);margin-bottom:10px}
+footer{border-top:1px solid var(--line);margin-top:50px;padding:22px 0 40px;color:var(--mute);font-size:12px}
+footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+section[hidden]{display:none}
+@media (max-width:960px){.hero{grid-template-columns:1fr}.rank-grid{grid-template-columns:1fr}.method{grid-template-columns:1fr}.tiles{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:640px){
+  .wrap{padding:0 16px}.top .wrap{height:auto;flex-wrap:wrap;padding-top:10px;padding-bottom:10px}
+  .tabs{order:3;width:100%;margin-left:0;justify-content:space-between}.tabs button{padding:9px 8px;font-size:12px;letter-spacing:.06em}.tile b{word-break:break-word}.stats3 b{font-size:14px}
+  .pill.hide-s{display:none}.trio{gap:6px}.trio div{padding:9px}.games{grid-template-columns:1fr}
+  .rk{grid-template-columns:22px 28px 1fr 64px;padding:9px 12px}.rk .pbar{display:none}.rk .ranks{display:none}
+  .detail{padding:4px 12px 14px}.units{grid-template-columns:1fr}.trio b{font-size:18px}.tile b{font-size:22px}.trio b{font-size:16px}.spot .mu{font-size:24px}
+  h2{font-size:28px}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <div class="brand"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M9 5v10a7 7 0 0 0 14 0V5" stroke="var(--turf)" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M16 22v7" stroke="var(--turf)" stroke-width="3" stroke-linecap="round"/></svg><span>Side<em>line</em></span></div>
+  <span class="pill" id="weekpill"></span><span class="pill hide-s" id="updpill"></span>
+  <nav class="tabs" role="tablist">
+    <button class="on" data-t="slate">Slate</button><button data-t="rank">Rankings</button><button data-t="record">Record</button><button data-t="method">Method</button>
+  </nav>
+  <button class="icon-btn" id="theme" title="Toggle light / dark" aria-label="Toggle light or dark theme"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+</div></header>
+<div class="ticker" aria-hidden="true"><div class="ticker-track" id="ticker"></div></div>
+
+<main class="wrap">
+  <div class="hero">
+    <div>
+      <div class="kicker">NFL model · <span id="seasonlbl"></span></div>
+      <h1>The NFL,<br><span>by the numbers</span></h1>
+      <p class="lede">Spreads and totals from a play-by-play model — opponent-adjusted efficiency, quarterback and roster ratings, injuries, ESPN projections and weather — set against the Vegas line.</p>
+    </div>
+    <div class="spot" id="spot"></div>
+  </div>
+  <div class="tiles" id="tiles"></div>
+
+  <section id="slate">
+    <div class="sec-h"><div><h2>The slate</h2><p class="sub">Lines are shown in betting terms. <b>Edge</b> is how far the model's spread is from the market's, toward the side the model prefers.</p></div>
+      <div class="controls" id="filters">
+        <button class="chip on" data-f="all">All games</button><button class="chip" data-f="edge">Edge 3+</button><button class="chip" data-f="qb">Backup QB</button><button class="chip" data-f="live">Live / final</button>
+        <select class="chip" id="sort" aria-label="Sort games"><option value="kick">Sort: kickoff</option><option value="edge">Sort: biggest edge</option><option value="close">Sort: closest game</option><option value="total">Sort: total edge</option></select>
+      </div></div>
+    <div class="games" id="games"></div>
+  </section>
+
+  <section id="rank" hidden>
+    <div class="sec-h"><div><h2>Power ratings</h2><p class="sub" id="ranksub"></p></div></div>
+    <div class="rank-grid">
+      <div class="panel"><div class="panel-h"><h3>All 32 teams</h3><span>tap a team for its unit ratings</span></div><div id="ranklist"></div></div>
+      <div class="panel scatter"><div class="panel-h"><h3>Offense vs defense</h3><span>EPA per play, opponent-adjusted</span></div><div id="scatter"></div>
+        <div class="legend">Right = better offense, up = better defense. Each dot is a team; distance from the middle is how far from average it is.</div></div>
+    </div>
+  </section>
+
+  <section id="record" hidden>
+    <div class="sec-h"><div><h2>Track record</h2><p class="sub">Every live prediction is saved before kickoff and graded against the closing line. The backtest replays 2012–now, week by week, using only information available at the time.</p></div></div>
+    <div class="tiles" id="livetiles"></div>
+    <div class="panel chart" style="margin-bottom:16px"><div class="panel-h"><h3>Average miss by season</h3><span>points per game, lower is better</span></div><div id="seasonchart" style="padding:10px 12px 4px"></div></div>
+    <div class="panel"><div class="panel-h"><h3>Model lineup</h3><span>walk-forward, recent seasons · ★ live model</span></div><div style="overflow-x:auto"><table id="models"></table></div></div>
+  </section>
+
+  <section id="method" hidden>
+    <div class="sec-h"><div><h2>How it works</h2><p class="sub">Built to be honest first: nothing the model sees could not have been known before kickoff, and the betting line is never an input.</p></div></div>
+    <div class="method">
+      <div class="panel"><div class="step">01 · RATINGS</div><h3>Opponent-adjusted efficiency</h3><p>Every week, 21 offense and defense ratings are refit from play-by-play (EPA, success rate, explosive plays, pressure, red zone, special teams, pace…), adjusted for who each team played. Garbage time is ignored.</p></div>
+      <div class="panel"><div class="step">02 · PLAYERS</div><h3>Quarterbacks &amp; rosters</h3><p>Each starting QB is rated by EPA per dropback and ESPN QBR. Every other player is rated by his contract's share of the cap, weighted by snaps and by the official injury report. ESPN fantasy projections add a second opinion.</p></div>
+      <div class="panel"><div class="step">03 · MODEL</div><h3>Ridge + trees, retrained weekly</h3><p>Several model recipes compete; the live one only changes when a challenger is clearly better on recent seasons. Totals add weather: wind matters most.</p></div>
+      <div class="panel"><div class="step">04 · TESTING</div><h3>An honest backtest</h3><p>Settings were chosen on early seasons only, then scored on later seasons the model never saw. The model is close to the closing line but slightly behind it, and no betting strategy has proven an edge.</p></div>
+      <div class="panel"><div class="step">05 · UPDATES</div><h3>Runs itself</h3><p>Full refresh every Tuesday. Injury reports, rosters and projections are pulled again Thursday, Saturday and Sunday morning, and games that haven't kicked off are re-predicted.</p></div>
+      <div class="panel"><div class="step">06 · DATA</div><h3>Sources</h3><ul><li>nflverse play-by-play, schedules, injuries, snaps, rosters</li><li>OverTheCap contracts, ESPN QBR</li><li>ESPN fantasy projections &amp; live scores</li><li>Open-Meteo weather</li></ul></div>
+    </div>
+  </section>
+</main>
+<footer><div class="wrap"><span>Sideline · an NFL model. For entertainment and research — not betting advice.</span><span id="foot"></span></div></footer>
+
+<script id="data" type="application/json">{"updated": "Sat Nov 14, 5:30 PM CT", "season": 2026, "week": 10, "games": [{"game_id": "2026_10_NE_DET", "gameday": "2026-11-15", "kickoff_et": "09:30", "away": "NE", "home": "DET", "away_qb": "Drake Maye", "home_qb": "Jared Goff", "model_spread": -1.7, "market_spread": -2.5, "spread_edge": -0.8, "model_total": 51.6, "market_total": 49.5, "total_edge": 2.1, "home_win_prob": 0.552, "temp": 70.0, "wind": 0.0, "home_inj": null, "away_inj": null, "home_qb_not_regular": 0, "away_qb_not_regular": 0, "home_qbr": 56.0, "away_qbr": 61.0, "home_roster": 64.1, "away_roster": 48.9, "home_injured_value": 8.6, "away_injured_value": 10.1, "home_espn_proj": 94.4, "away_espn_proj": 80.5, "home_score": null, "away_score": null, "result": null}, {"game_id": "2026_10_KC_ATL", "gameday": "2026-11-15", "kickoff_et": "13:00", "away": "KC", "home": "ATL", "away_qb": "Patrick Mahomes", "home_qb": "Michael Penix Jr.", "model_spread": 6.8, "market_spread": 3.0, "spread_edge": -3.8, "model_total": 45.7, "market_total": 47.5, "total_edge": -1.8, "home_win_prob": 0.3, "temp": 55.0, "wind": 4.0, "home_inj": null, "away_inj": null, "home_qb_not_regular": 0, "away_qb_not_regular": 0, "home_qbr": 51.0, "away_qbr": 61.0, "home_roster": 50.5, "away_roster": 58.6, "home_injured_value": 2.0, "away_injured_value": 5.3, "home_espn_proj": 70.6, "away_espn_proj": 87.4, "home_score": null, "away_score": null, "result": null}, {"game_id": "2026_10_HOU_CLE", "gameday": "2026-11-15", "kickoff_et": "13:00", "away": "HOU", "home": "CLE", "away_qb": "C.J. Stroud", "home_qb": "Deshaun Watson", "model_spread": 5.8, "market_spread": 4.5, "spread_edge": -1.3, "model_total": 39.7, "market_total": 40.5, "total_edge": -0.8, "home_win_prob": 0.329, "temp": 45.0, "wind": 13.0, "home_inj": null, "away_inj": null, "home_qb_not_regular": 0, "away_qb_not_regular": 0, "home_qbr": 39.0, "away_qbr": 55.0, "home_roster": 60.8, "away_roster": 43.2, "home_injured_value": 0.7, "away_injured_value": 17.7, "home_espn_proj": 74.2, "away_espn_proj": 73.5, "home_score": null, "away_score": null, "result": null}, {"game_id": "2026_10_MIN_GB", "gameday": "2026-11-15", "kickoff_et": "13:00", "away": "MIN", "home": "GB", "away_qb": "Kirk Cousins", "home_qb": "Jordan Love", "model_spread": -3.0, "market_spread": -2.5, "spread_edge": 0.5, "model_total": 41.3, "market_total": 42.5, "total_edge": -1.2, "home_win_prob": 0.592, "temp": 43.0, "wind": 2.0, "home_inj": null, "away_inj": null, "home_qb_not_regular": 0, "away_qb_not_regular": 1, "home_qbr": 63.0, "away_qbr": 52.0, "home_roster": 30.8, "away_roster": 67.8, "home_injured_value": 8.6, "away_injured_value": 10.6, "home_espn_proj": 80.0, "away_espn_proj": 74.5, "home_score": null, "away_score": null, "result": null}, {"game_id": "2026_10_MIA_IND", "gameday": "2026-11-15", "kickoff_et": "13:00", "away": "MIA", "home": "IND", "away_qb": "Malik Willis", "home_qb": "Daniel Jones", "model_spread": -3.6, "market_spread": -4.5, "spread_edge": -0.9, "model_total": 44.2, "market_total": 37.5, "total_edge": 6.7, "home_win_prob": 0.611, "temp": 49.0, "wind": 4.0, "home_inj": null, "away_inj": null, "home_qb_not_regular": 0, "away_qb_not_regular": 0, "home_qbr": 46.0, "away_qbr": 49.0, "home_roster": 46.1, "away_roster": 22.7, "home_injured_value": 2.6, "away_injured_value": 3.1, "home_espn_proj": 65.4, "away_espn_proj": 63.8, "home_score": null, "away_score": null, "result": null}, {"game_id": "2026_10_CAR_NO", "gameday": "2026-11-15", "kickoff_et": "13:00", "away": "CAR", "home": "NO", "away_qb": "Bryce Young", "home_qb": "Tyler Shough", "model_spread": 1.2, "market_spread": -2.5, "spread_edge": -3.7, "model_total": 47.4, "market_total": 48.5, "total_edge": -1.1, "home_win_prob": 0.462, "temp": 70.0, "wind": 0.0, "home_inj": null, "away_inj": null, "home_qb_not_regular": 0, "away_qb_not_regular": 0, "home_qbr": 52.0, "away_qbr": 49.0, "home_roster": 40.7, "away_roster": 45.6, "home_injured_value": 7.7, "away_injured_value": 4.4, "home_espn_proj": 75.1, "away_espn_proj": 82.8, "home_score": null, "away_score": null, "result": null}, {"game_id": "2026_10_BUF_NYJ", "gameday": "2026-11-15", "kickoff_et": "13:00", "away": "BUF", "home": "NYJ", "away_qb": "Josh Allen", "home_qb": "Geno Smith", "model_spread": 9.9, "market_spread": 7.5, "spread_edge": -2.4, "model_total": 46.3, "market_total": 50.5, "total_edge": -4.2, "home_win_prob": 0.223, "temp": 46.0, "wind": 10.0, "home_inj": null, "away_inj": null, "home_qb_not_regular": 0, "away_qb_not_regular": 0, "home_qbr": 47.0, "away_qbr": 65.0, "home_roster": 49.4, "away_roster": 61.3, "home_injured_value": 3.8, "away_injured_value": 6.4, "home_espn_proj": 75.0, "away_espn_proj": 90.3, "home_score": null, "away_score": null, "result": null}, {"game_id": "2026_10_JAX_TEN", "gameday": "2026-11-15", "kickoff_et": "13:00", "away": "JAX", "home": "TEN", "away_qb": "Trevor Lawrence", "home_qb": "Cam Ward", "model_spread": 13.6, "market_spread": 10.5, "spread_edge": -3.1, "model_total": 42.6, "market_total": 46.5, "total_edge": -3.9, "home_win_prob": 0.148, "temp": 54.0, "wind": 7.0, "home_inj": null, "away_inj": null, "home_qb_not_regular": 0, "away_qb_not_regular": 0, "home_qbr": 40.0, "away_qbr": 55.0, "home_roster": 28.4, "away_roster": 48.1, "home_injured_value": 7.8, "away_injured_value": 8.8, "home_espn_proj": 63.4, "away_espn_proj": 87.4, "home_score": null, "away_score": null, "result": null}, {"game_id": "2026_10_LA_ARI", "gameday": "2026-11-15", "kickoff_et": "16:05", "away": "LA", "home": "ARI", "away_qb": "Matthew Stafford", "home_qb": "Gardner Minshew", "model_spread": 9.6, "market_spread": 9.5, "spread_edge": -0.1, "model_total": 45.0, "market_total": 39.5, "total_edge": 5.5, "home_win_prob": 0.23, "temp": 74.0, "wind": 2.0, "home_inj": null, "away_inj": null, "home_qb_not_regular": 1, "away_qb_not_regular": 0, "home_qbr": 45.0, "away_qbr": 59.0, "home_roster": 34.8, "away_roster": 57.7, "home_injured_value": 3.4, "away_injured_value": 4.5, "home_espn_proj": 55.2, "away_espn_proj": 79.0, "home_score": null, "away_score": null, "result": null}, {"game_id": "2026_10_SEA_LV", "gameday": "2026-11-15", "kickoff_et": "16:05", "away": "SEA", "home": "LV", "away_qb": "Sam Darnold", "home_qb": "Fernando Mendoza", "model_spread": 11.9, "market_spread": 6.5, "spread_edge": -5.4, "model_total": 41.3, "market_total": 40.5, "total_edge": 0.8, "home_win_prob": 0.181, "temp": 70.0, "wind": 0.0, "home_inj": null, "away_inj": null, "home_qb_not_regular": 1, "away_qb_not_regular": 0, "home_qbr": 40.0, "away_qbr": 50.0, "home_roster": 45.2, "away_roster": 39.0, "home_injured_value": 0.1, "away_injured_value": 18.3, "home_espn_proj": 65.8, "away_espn_proj": 87.6, "home_score": null, "away_score": null, "result": null}, {"game_id": "2026_10_SF_DAL", "gameday": "2026-11-15", "kickoff_et": "16:25", "away": "SF", "home": "DAL", "away_qb": "Brock Purdy", "home_qb": "Dak Prescott", "model_spread": 4.1, "market_spread": 3.5, "spread_edge": -0.6, "model_total": 55.4, "market_total": 55.5, "total_edge": -0.1, "home_win_prob": 0.375, "temp": 48.0, "wind": 8.0, "home_inj": null, "away_inj": null, "home_qb_not_regular": 0, "away_qb_not_regular": 0, "home_qbr": 64.0, "away_qbr": 65.0, "home_roster": 66.5, "away_roster": 79.6, "home_injured_value": 5.4, "away_injured_value": 9.2, "home_espn_proj": 82.3, "away_espn_proj": 92.2, "home_score": null, "away_score": null, "result": null}, {"game_id": "2026_10_PIT_CIN", "gameday": "2026-11-15", "kickoff_et": "20:20", "away": "PIT", "home": "CIN", "away_qb": "Aaron Rodgers", "home_qb": "Joe Burrow", "model_spread": -5.8, "market_spread": -3.5, "spread_edge": 2.3, "model_total": 46.2, "market_total": 49.5, "total_edge": -3.3, "home_win_prob": 0.672, "temp": 43.0, "wind": 2.0, "home_inj": null, "away_inj": null, "home_qb_not_regular": 0, "away_qb_not_regular": 0, "home_qbr": 64.0, "away_qbr": 45.0, "home_roster": 55.5, "away_roster": 61.1, "home_injured_value": 0.6, "away_injured_value": 0.0, "home_espn_proj": 90.2, "away_espn_proj": 73.4, "home_score": null, "away_score": null, "result": null}, {"game_id": "2026_10_LAC_BAL", "gameday": "2026-11-16", "kickoff_et": "20:15", "away": "LAC", "home": "BAL", "away_qb": "Justin Herbert", "home_qb": "Tyler Huntley", "model_spread": -5.8, "market_spread": -4.5, "spread_edge": 1.3, "model_total": 40.8, "market_total": 38.5, "total_edge": 2.3, "home_win_prob": 0.672, "temp": 47.0, "wind": 4.0, "home_inj": null, "away_inj": null, "home_qb_not_regular": 0, "away_qb_not_regular": 0, "home_qbr": 51.0, "away_qbr": 48.0, "home_roster": 77.4, "away_roster": 25.5, "home_injured_value": 0.0, "away_injured_value": 0.0, "home_espn_proj": 71.9, "away_espn_proj": 57.1, "home_score": null, "away_score": null, "result": null}], "ratings": {"season": 2026, "week": 10, "teams": [{"team": "JAX", "rank": 1, "power": 8.2401729234, "off_epa": 0.1362650585, "def_epa": 0.1734727773, "pass_off": 0.2056729046, "rush_off": 0.0520753018, "pass_def": 0.2294194777, "rush_def": 0.114437139, "st": 0.6849857261, "pts_off": 4.4436055987, "pts_def": 5.0552533011, "pressure_rate_created": 0.0211566569, "qb_epa_value": 0.0829708066, "qbr": 55.273866543, "roster_off": 23.7001875, "roster_def": 24.4465, "injured_value": 8.8220625, "espn_off_proj": 87.44109397, "qb": "Trevor Lawrence", "key_players": "Josh Hines-Allen (DL), Cole Van Lanen (OL), Jakobi Meyers (WR)", "record": "6-2", "off_epa_rank": 2, "def_epa_rank": 1, "st_rank": 10, "qb_epa_value_rank": 10, "roster_off_rank": 17, "roster_def_rank": 19}, {"team": "BUF", "rank": 2, "power": 7.6040596569, "off_epa": 0.1159836529, "def_epa": 0.0688481429, "pass_off": 0.1344618435, "rush_off": 0.102725259, "pass_def": 0.1216753529, "rush_def": -0.0179023081, "st": -0.7788567779, "pts_off": 6.5110841096, "pts_def": 0.1976249245, "pressure_rate_created": 0.0326123061, "qb_epa_value": 0.1541019627, "qbr": 64.5172635482, "roster_off": 29.71425, "roster_def": 31.62675, "injured_value": 6.36225, "espn_off_proj": 90.3270485, "qb": "Josh Allen", "key_players": "Dion Dawkins (OL), DJ Moore (WR), Christian Benford (DB)", "record": "7-1", "off_epa_rank": 4, "def_epa_rank": 7, "st_rank": 22, "qb_epa_value_rank": 3, "roster_off_rank": 10, "roster_def_rank": 10}, {"team": "SF", "rank": 3, "power": 7.2108482574, "off_epa": 0.1533703294, "def_epa": 0.0133856157, "pass_off": 0.2369908787, "rush_off": 0.0782357668, "pass_def": 0.0116840112, "rush_def": 0.0176559905, "st": -1.8639892781, "pts_off": 3.7658512987, "pts_def": 1.2036129159, "pressure_rate_created": -0.0160254488, "qb_epa_value": 0.1862895074, "qbr": 64.5734606795, "roster_off": 39.07025, "roster_def": 40.47975, "injured_value": 9.205, "espn_off_proj": 92.2181119, "qb": "Brock Purdy", "key_players": "Trent Williams (OL), Nick Bosa (DL), Fred Warner (LB)", "record": "7-1", "off_epa_rank": 1, "def_epa_rank": 11, "st_rank": 29, "qb_epa_value_rank": 1, "roster_off_rank": 3, "roster_def_rank": 2}, {"team": "CIN", "rank": 4, "power": 6.3471268183, "off_epa": 0.1318652178, "def_epa": -0.0702693862, "pass_off": 0.1564480051, "rush_off": 0.0636910862, "pass_def": -0.0808834719, "rush_def": -0.0454469732, "st": 0.0064098026, "pts_off": 5.2098983442, "pts_def": -1.582120912, "pressure_rate_created": -0.007855794, "qb_epa_value": 0.134923551, "qbr": 64.1079979228, "roster_off": 35.548, "roster_def": 19.9535, "injured_value": 0.6435, "espn_off_proj": 90.21805069, "qb": "Joe Burrow", "key_players": "Ja'Marr Chase (WR), Tee Higgins (WR), Orlando Brown (OL)", "record": "6-2", "off_epa_rank": 3, "def_epa_rank": 25, "st_rank": 14, "qb_epa_value_rank": 4, "roster_off_rank": 5, "roster_def_rank": 26}, {"team": "DET", "rank": 5, "power": 5.7532856859, "off_epa": 0.061009307, "def_epa": -0.02941437, "pass_off": 0.0902572648, "rush_off": 0.0175132182, "pass_def": -0.0451656407, "rush_def": 0.0070657599, "st": 2.9301509447, "pts_off": 3.7105667683, "pts_def": -0.6162179719, "pressure_rate_created": 0.0144515335, "qb_epa_value": 0.1254682742, "qbr": 55.8730195698, "roster_off": 33.4358125, "roster_def": 30.6255, "injured_value": 8.5524375, "espn_off_proj": 94.3709099, "qb": "Jared Goff", "key_players": "Aidan Hutchinson (DL), Penei Sewell (OL), Amon-Ra St. Brown (WR)", "record": "6-2", "off_epa_rank": 11, "def_epa_rank": 21, "st_rank": 3, "qb_epa_value_rank": 6, "roster_off_rank": 7, "roster_def_rank": 12}, {"team": "KC", "rank": 6, "power": 5.4206258227, "off_epa": 0.0867287216, "def_epa": 0.0048453672, "pass_off": 0.0612242996, "rush_off": 0.1211449646, "pass_def": -0.0313529955, "rush_def": 0.0394511857, "st": -1.4490079121, "pts_off": 0.2824169966, "pts_def": 3.004246064, "pressure_rate_created": -0.0202798437, "qb_epa_value": 0.1202748175, "qbr": 60.6616630525, "roster_off": 26.04075, "roster_def": 32.5715833333, "injured_value": 5.287, "espn_off_proj": 87.37792291, "qb": "Patrick Mahomes", "key_players": "Chris Jones (DL), Trey Smith (OL), Creed Humphrey (OL)", "record": "6-2", "off_epa_rank": 6, "def_epa_rank": 14, "st_rank": 25, "qb_epa_value_rank": 8, "roster_off_rank": 14, "roster_def_rank": 7}, {"team": "SEA", "rank": 7, "power": 5.2921050174, "off_epa": 0.0250877036, "def_epa": 0.1522447295, "pass_off": 0.1062742448, "rush_off": -0.0660443618, "pass_def": 0.1816022989, "rush_def": 0.1056020771, "st": 3.5390421997, "pts_off": 1.0204265617, "pts_def": 4.5685682597, "pressure_rate_created": 0.0266782988, "qb_epa_value": 0.0589336444, "qbr": 50.3144971297, "roster_off": 17.22475, "roster_def": 21.74375, "injured_value": 18.2635, "espn_off_proj": 87.58268794, "qb": "Sam Darnold", "key_players": "Abraham Lucas (OL), Cooper Kupp (WR), Julian Love (DB)", "record": "5-4", "off_epa_rank": 14, "def_epa_rank": 2, "st_rank": 2, "qb_epa_value_rank": 14, "roster_off_rank": 27, "roster_def_rank": 24}, {"team": "CHI", "rank": 8, "power": 5.1139742399, "off_epa": 0.0761618063, "def_epa": 0.0607137559, "pass_off": 0.1062478808, "rush_off": 0.0417981316, "pass_def": 0.120189585, "rush_def": -0.0279594669, "st": 4.0592938506, "pts_off": 3.666907368, "pts_def": 0.5083428977, "pressure_rate_created": 0.0110129477, "qb_epa_value": 0.0668357791, "qbr": 54.0706520965, "roster_off": 24.119, "roster_def": 38.7310625, "injured_value": 0.1334375, "espn_off_proj": 81.59431187, "qb": "Caleb Williams", "key_players": "Jeffery Simmons (DL), Montez Sweat (DL), Jaylon Johnson (DB)", "record": "7-2", "off_epa_rank": 10, "def_epa_rank": 8, "st_rank": 1, "qb_epa_value_rank": 12, "roster_off_rank": 16, "roster_def_rank": 4}, {"team": "LA", "rank": 9, "power": 4.6530944316, "off_epa": 0.0996568488, "def_epa": 0.0796138511, "pass_off": 0.0889123355, "rush_off": 0.104157822, "pass_def": 0.0742014736, "rush_def": 0.0641654439, "st": -2.4040942824, "pts_off": 1.8687707351, "pts_def": 2.1861253814, "pressure_rate_created": -0.0180770122, "qb_epa_value": 0.1077778296, "qbr": 59.4105776925, "roster_off": 25.665625, "roster_def": 32.0751041667, "injured_value": 4.5119375, "espn_off_proj": 79.00074129, "qb": "Matthew Stafford", "key_players": "Myles Garrett (LB), Aaron Donald (DL), Alaric Jackson (OL)", "record": "5-4", "off_epa_rank": 5, "def_epa_rank": 5, "st_rank": 31, "qb_epa_value_rank": 9, "roster_off_rank": 15, "roster_def_rank": 8}, {"team": "NE", "rank": 10, "power": 3.6837500758, "off_epa": 0.0801774616, "def_epa": 0.0065110557, "pass_off": 0.1549056073, "rush_off": -0.0143421937, "pass_def": -0.0312879071, "rush_def": 0.0565376578, "st": 1.4462602525, "pts_off": 1.7100074752, "pts_def": 1.0380768556, "pressure_rate_created": 0.0124415894, "qb_epa_value": 0.1220862206, "qbr": 61.1542363549, "roster_off": 20.8557708333, "roster_def": 28.047125, "injured_value": 10.1084375, "espn_off_proj": 80.51984187, "qb": "Drake Maye", "key_players": "A.J. Brown (WR), Milton Williams (DL), Robert Spillane (LB)", "record": "5-4", "off_epa_rank": 9, "def_epa_rank": 13, "st_rank": 7, "qb_epa_value_rank": 7, "roster_off_rank": 21, "roster_def_rank": 15}, {"team": "GB", "rank": 11, "power": 3.1637149002, "off_epa": 0.081502703, "def_epa": 0.0690251922, "pass_off": 0.1793564738, "rush_off": -0.0916999644, "pass_def": 0.0901737381, "rush_def": 0.0161243635, "st": -0.9497205121, "pts_off": 1.0964143316, "pts_def": 2.0250735252, "pressure_rate_created": 0.0039154131, "qb_epa_value": 0.1545382788, "qbr": 62.5948893531, "roster_off": 16.8405833333, "roster_def": 13.9536375, "injured_value": 8.6311125, "espn_off_proj": 79.96495485, "qb": "Jordan Love", "key_players": "Xavier McKinney (DB), Aaron Banks (OL), Christian Watson (WR)", "record": "6-3", "off_epa_rank": 8, "def_epa_rank": 6, "st_rank": 23, "qb_epa_value_rank": 2, "roster_off_rank": 28, "roster_def_rank": 29}, {"team": "DEN", "rank": 12, "power": 2.176409596, "off_epa": 0.0295548372, "def_epa": 0.0567382232, "pass_off": 0.0238611241, "rush_off": 0.0319409404, "pass_def": 0.1051666207, "rush_def": -0.0104943206, "st": -0.67578237, "pts_off": 0.3154254476, "pts_def": 2.8826135382, "pressure_rate_created": 0.0361935214, "qb_epa_value": 0.0365556946, "qbr": 52.5751302685, "roster_off": 49.818375, "roster_def": 33.5085, "injured_value": 0.127375, "espn_off_proj": 68.78589807, "qb": "Bo Nix", "key_players": "Pat Surtain II (DB), Garett Bolles (OL), Mike McGlinchey (OL)", "record": "7-2", "off_epa_rank": 13, "def_epa_rank": 9, "st_rank": 21, "qb_epa_value_rank": 16, "roster_off_rank": 1, "roster_def_rank": 5}, {"team": "DAL", "rank": 13, "power": 1.9604658982, "off_epa": 0.0841526969, "def_epa": -0.1236763387, "pass_off": 0.106573149, "rush_off": 0.057893458, "pass_def": -0.1614728857, "rush_def": -0.1070401804, "st": 1.4752628173, "pts_off": 3.3661572217, "pts_def": -4.2288156672, "pressure_rate_created": -0.0230712261, "qb_epa_value": 0.1263029583, "qbr": 63.8498582752, "roster_off": 33.8556666667, "roster_def": 32.6315125, "injured_value": 5.3799875, "espn_off_proj": 82.25607769, "qb": "Dak Prescott", "key_players": "CeeDee Lamb (WR), Tyler Smith (OL), DaRon Bland (DB)", "record": "4-5", "off_epa_rank": 7, "def_epa_rank": 32, "st_rank": 6, "qb_epa_value_rank": 5, "roster_off_rank": 6, "roster_def_rank": 6}, {"team": "TB", "rank": 14, "power": 1.9394345115, "off_epa": -0.0538963908, "def_epa": 0.129673476, "pass_off": -0.183769804, "rush_off": 0.0504335893, "pass_def": 0.2032036076, "rush_def": 0.0436033529, "st": 0.0852605647, "pts_off": -0.261559998, "pts_def": 2.2052526013, "pressure_rate_created": -0.0281544944, "qb_epa_value": 0.0093752575, "qbr": 51.8844821103, "roster_off": 33.26025, "roster_def": 31.16675, "injured_value": 0.343, "espn_off_proj": 67.90143376, "qb": "Baker Mayfield", "key_players": "Tristan Wirfs (OL), Luke Goedeke (OL), Antoine Winfield Jr. (DB)", "record": "3-6", "off_epa_rank": 22, "def_epa_rank": 3, "st_rank": 13, "qb_epa_value_rank": 18, "roster_off_rank": 8, "roster_def_rank": 11}, {"team": "HOU", "rank": 15, "power": 1.497860824, "off_epa": 0.0451780879, "def_epa": 0.0518457939, "pass_off": 0.116042918, "rush_off": -0.0977692684, "pass_def": 0.0593020422, "rush_def": 0.0439164504, "st": -1.8889269421, "pts_off": 2.0114170499, "pts_def": 1.5774390805, "pressure_rate_created": 0.0051684222, "qb_epa_value": 0.0702937031, "qbr": 55.2566452951, "roster_off": 19.020125, "roster_def": 24.2039375, "injured_value": 17.7394375, "espn_off_proj": 73.51683109, "qb": "C.J. Stroud", "key_players": "Derek Stingley Jr. (DB), Nico Collins (WR), Jalen Pitre (DB)", "record": "3-5", "off_epa_rank": 12, "def_epa_rank": 10, "st_rank": 30, "qb_epa_value_rank": 11, "roster_off_rank": 23, "roster_def_rank": 20}, {"team": "PIT", "rank": 16, "power": 1.2585177217, "off_epa": 0.0224240638, "def_epa": 0.0120078816, "pass_off": -0.0644264557, "rush_off": 0.1683477699, "pass_def": 0.0137536487, "rush_def": 0.0245040466, "st": -0.0839819725, "pts_off": -0.4418865315, "pts_def": 2.4422423002, "pressure_rate_created": 0.0052381914, "qb_epa_value": -0.024996757, "qbr": 45.3245181698, "roster_off": 22.0845, "roster_def": 39.0075, "injured_value": 0.0, "espn_off_proj": 73.4146822, "qb": "Aaron Rodgers", "key_players": "DK Metcalf (WR), T.J. Watt (LB), Jalen Ramsey (DB)", "record": "6-2", "off_epa_rank": 15, "def_epa_rank": 12, "st_rank": 15, "qb_epa_value_rank": 25, "roster_off_rank": 19, "roster_def_rank": 3}, {"team": "MIN", "rank": 17, "power": 0.5201731981, "off_epa": -0.1497584524, "def_epa": 0.1138955945, "pass_off": -0.1559041697, "rush_off": -0.1325375447, "pass_def": 0.1897637189, "rush_def": 0.0182256297, "st": 2.3544764008, "pts_off": -4.0996650773, "pts_def": 6.2407956086, "pressure_rate_created": 0.0727714446, "qb_epa_value": 0.0633193372, "qbr": 52.4347558084, "roster_off": 44.2013125, "roster_def": 23.6276875, "injured_value": 10.56975, "espn_off_proj": 74.49677448, "qb": "Kirk Cousins", "key_players": "Justin Jefferson (WR), Brian O'Neill (OL), Christian Darrisaw (OL)", "record": "6-2", "off_epa_rank": 30, "def_epa_rank": 4, "st_rank": 4, "qb_epa_value_rank": 13, "roster_off_rank": 2, "roster_def_rank": 21}, {"team": "CAR", "rank": 18, "power": -1.8164779313, "off_epa": -0.006136799, "def_epa": -0.0708836478, "pass_off": -0.0185682547, "rush_off": 0.031279918, "pass_def": -0.091485869, "rush_def": -0.0415458532, "st": -0.3492037732, "pts_off": 0.2686527531, "pts_def": -2.5101353179, "pressure_rate_created": -0.0325347105, "qb_epa_value": -0.0231440065, "qbr": 48.9590755474, "roster_off": 22.30425, "roster_def": 23.303375, "injured_value": 4.385875, "espn_off_proj": 82.80240654, "qb": "Bryce Young", "key_players": "Robert Hunt (OL), Derrick Brown (DL), Tre'von Moehrig (DB)", "record": "3-5", "off_epa_rank": 17, "def_epa_rank": 26, "st_rank": 18, "qb_epa_value_rank": 24, "roster_off_rank": 18, "roster_def_rank": 22}, {"team": "ATL", "rank": 19, "power": -2.0960246372, "off_epa": -0.0641423148, "def_epa": 0.0031034932, "pass_off": -0.1541809113, "rush_off": 0.0173283928, "pass_def": 0.0884503423, "rush_def": 0.0214546789, "st": -3.2299571625, "pts_off": -1.922730177, "pts_def": -0.55034114, "pressure_rate_created": 0.0154742936, "qb_epa_value": -0.0133612725, "qbr": 50.5240525614, "roster_off": 37.88675, "roster_def": 12.632125, "injured_value": 1.961875, "espn_off_proj": 70.55425671, "qb": "Michael Penix Jr.", "key_players": "Chris Lindstrom (OL), Jawaan Taylor (OL), Jake Matthews (OL)", "record": "3-6", "off_epa_rank": 23, "def_epa_rank": 15, "st_rank": 32, "qb_epa_value_rank": 20, "roster_off_rank": 4, "roster_def_rank": 30}, {"team": "BAL", "rank": 20, "power": -2.0962246254, "off_epa": 9.3493e-05, "def_epa": -0.0160640836, "pass_off": 0.0058137257, "rush_off": 0.0186794805, "pass_def": -0.0430629554, "rush_def": 0.0238399323, "st": -1.1409578656, "pts_off": -1.7292658713, "pts_def": -1.6020362592, "pressure_rate_created": -0.0116256637, "qb_epa_value": -0.0170920806, "qbr": 50.7675499903, "roster_off": 30.88525, "roster_def": 46.554, "injured_value": 0.0, "espn_off_proj": 71.94865478, "qb": "Tyler Huntley", "key_players": "Marlon Humphrey (DB), Kyle Hamilton (DB), Roquan Smith (LB)", "record": "4-5", "off_epa_rank": 16, "def_epa_rank": 19, "st_rank": 24, "qb_epa_value_rank": 21, "roster_off_rank": 9, "roster_def_rank": 1}, {"team": "WAS", "rank": 21, "power": -2.4368446141, "off_epa": -0.0361841207, "def_epa": -0.0597905275, "pass_off": -0.0165118793, "rush_off": -0.0695174352, "pass_def": -0.0561667425, "rush_def": -0.0374922714, "st": 0.9397654069, "pts_off": -1.3211520946, "pts_def": -1.8918351695, "pressure_rate_created": -0.0121094398, "qb_epa_value": 0.0503718588, "qbr": 56.8681192447, "roster_off": 17.81125, "roster_def": 18.73725, "injured_value": 0.0, "espn_off_proj": 72.01765525, "qb": "Jayden Daniels", "key_players": "Sam Cosmi (OL), Stefon Diggs (WR), Frankie Luvu (LB)", "record": "3-5-1", "off_epa_rank": 19, "def_epa_rank": 23, "st_rank": 9, "qb_epa_value_rank": 15, "roster_off_rank": 24, "roster_def_rank": 27}, {"team": "NYG", "rank": 22, "power": -3.2051840082, "off_epa": -0.0252267545, "def_epa": -0.0191440967, "pass_off": -0.0199365365, "rush_off": -0.0463344457, "pass_def": 0.0092372295, "rush_def": -0.0726659285, "st": 0.5147306512, "pts_off": -0.8696366186, "pts_def": -0.3120397978, "pressure_rate_created": -0.0091283858, "qb_epa_value": -0.0731493346, "qbr": 42.452045977, "roster_off": 27.4465, "roster_def": 25.2743333333, "injured_value": 0.0, "espn_off_proj": 77.79280449, "qb": "J.J. McCarthy", "key_players": "Andrew Thomas (OL), Jevon Holland (DB), Arvell Reese (LB)", "record": "5-3-1", "off_epa_rank": 18, "def_epa_rank": 20, "st_rank": 11, "qb_epa_value_rank": 30, "roster_off_rank": 13, "roster_def_rank": 17}, {"team": "NO", "rank": 23, "power": -3.8874997748, "off_epa": -0.0421627306, "def_epa": -0.069008487, "pass_off": -0.0138996229, "rush_off": -0.0905875421, "pass_def": -0.113250146, "rush_def": -0.0110816282, "st": -0.169796186, "pts_off": -1.2114827582, "pts_def": -2.7808724763, "pressure_rate_created": -0.0188638769, "qb_epa_value": 0.0110308204, "qbr": 52.0625474804, "roster_off": 15.7435, "roster_def": 24.9160625, "injured_value": 7.6604375, "espn_off_proj": 75.12151724, "qb": "Tyler Shough", "key_players": "Chase Young (LB), Carl Granderson (LB), Cesar Ruiz (OL)", "record": "3-5", "off_epa_rank": 21, "def_epa_rank": 24, "st_rank": 16, "qb_epa_value_rank": 17, "roster_off_rank": 29, "roster_def_rank": 18}, {"team": "NYJ", "rank": 24, "power": -3.9801933553, "off_epa": -0.0650326959, "def_epa": -0.0722835606, "pass_off": -0.0933423771, "rush_off": -0.033233012, "pass_def": -0.1782725074, "rush_def": 0.0251062627, "st": 0.9882603087, "pts_off": -2.9005319979, "pts_def": -3.2345386334, "pressure_rate_created": -0.0140575367, "qb_epa_value": -0.0086046754, "qbr": 47.0360018157, "roster_off": 21.232875, "roster_def": 28.1808125, "injured_value": 3.7633125, "espn_off_proj": 75.01831616, "qb": "Geno Smith", "key_players": "Garrett Wilson (WR), Minkah Fitzpatrick (DB), Jamien Sherwood (LB)", "record": "2-7", "off_epa_rank": 24, "def_epa_rank": 27, "st_rank": 8, "qb_epa_value_rank": 19, "roster_off_rank": 20, "roster_def_rank": 14}, {"team": "IND", "rank": 25, "power": -4.4061110222, "off_epa": -0.0766129701, "def_epa": -0.0728001773, "pass_off": -0.1603743665, "rush_off": 0.0554395907, "pass_def": -0.0918829412, "rush_def": -0.0805685233, "st": 0.2240937962, "pts_off": -0.1874413699, "pts_def": -3.1276272205, "pressure_rate_created": -0.0120797673, "qb_epa_value": -0.0456296565, "qbr": 45.7151852908, "roster_off": 17.43475, "roster_def": 28.63775, "injured_value": 2.64125, "espn_off_proj": 65.42493671, "qb": "Daniel Jones", "key_players": "Sauce Gardner (DB), Bernhard Raimann (OL), Charvarius Ward (DB)", "record": "2-7", "off_epa_rank": 27, "def_epa_rank": 28, "st_rank": 12, "qb_epa_value_rank": 26, "roster_off_rank": 26, "roster_def_rank": 13}, {"team": "PHI", "rank": 26, "power": -5.5142943042, "off_epa": -0.0809607976, "def_epa": -0.0064934378, "pass_off": -0.1004703769, "rush_off": -0.0423212849, "pass_def": -0.0202243323, "rush_def": 0.0089393818, "st": 1.997263861, "pts_off": -4.7809996966, "pts_def": 0.339404647, "pressure_rate_created": -0.0174346753, "qb_epa_value": -0.066233174, "qbr": 42.5927007299, "roster_off": 28.1825, "roster_def": 20.63125, "injured_value": 0.0, "espn_off_proj": 64.71833018, "qb": "Joe Milton III", "key_players": "Jordan Mailata (OL), Landon Dickerson (OL), Zack Baun (LB)", "record": "2-7", "off_epa_rank": 28, "def_epa_rank": 18, "st_rank": 5, "qb_epa_value_rank": 28, "roster_off_rank": 12, "roster_def_rank": 25}, {"team": "CLE", "rank": 27, "power": -5.5798051486, "off_epa": -0.1624253432, "def_epa": 0.0022977108, "pass_off": -0.2051419611, "rush_off": -0.0939265725, "pass_def": 0.0383358717, "rush_def": -0.0305413966, "st": -0.5653584562, "pts_off": -4.688718901, "pts_def": 0.5744221356, "pressure_rate_created": 0.0177322268, "qb_epa_value": -0.0704892357, "qbr": 38.9993749925, "roster_off": 28.816875, "roster_def": 31.98225, "injured_value": 0.688375, "espn_off_proj": 74.16081663, "qb": "Deshaun Watson", "key_players": "Denzel Ward (DB), Elgton Jenkins (OL), Tytus Howard (OL)", "record": "5-4", "off_epa_rank": 31, "def_epa_rank": 16, "st_rank": 19, "qb_epa_value_rank": 29, "roster_off_rank": 11, "roster_def_rank": 9}, {"team": "ARI", "rank": 28, "power": -6.1978255415, "off_epa": -0.0404354431, "def_epa": -0.0484253159, "pass_off": -0.06081655, "rush_off": -0.0095295485, "pass_def": -0.1237095661, "rush_def": 0.0309394699, "st": -1.6623595158, "pts_off": -1.758874, "pts_def": -3.2889281567, "pressure_rate_created": -0.0143262612, "qb_epa_value": -0.0513527825, "qbr": 45.2438345375, "roster_off": 12.76375, "roster_def": 22.0470625, "injured_value": 3.3626875, "espn_off_proj": 55.22438596, "qb": "Gardner Minshew", "key_players": "Budda Baker (DB), Trey McBride (TE), Josh Sweat (LB)", "record": "3-6", "off_epa_rank": 20, "def_epa_rank": 22, "st_rank": 28, "qb_epa_value_rank": 27, "roster_off_rank": 30, "roster_def_rank": 23}, {"team": "LAC", "rank": 29, "power": -6.9296057268, "off_epa": -0.1647850358, "def_epa": -0.0015729445, "pass_off": -0.200226853, "rush_off": -0.0947345694, "pass_def": 0.0493548277, "rush_def": -0.0577880497, "st": -1.5859546198, "pts_off": -4.3185049659, "pts_def": -1.3029097462, "pressure_rate_created": -0.0026124734, "qb_epa_value": -0.0204716868, "qbr": 48.4726814209, "roster_off": 9.5788333333, "roster_def": 15.89725, "injured_value": 0.0, "espn_off_proj": 57.10583004, "qb": "Justin Herbert", "key_players": "Khalil Mack (LB), Joe Alt (OL), Dalvin Tomlinson (DL)", "record": "0-8", "off_epa_rank": 32, "def_epa_rank": 17, "st_rank": 26, "qb_epa_value_rank": 23, "roster_off_rank": 32, "roster_def_rank": 28}, {"team": "MIA", "rank": 30, "power": -7.0953953056, "off_epa": -0.0655896248, "def_epa": -0.1080453508, "pass_off": -0.1033750549, "rush_off": -0.0040975883, "pass_def": -0.1822778185, "rush_def": -0.0374306034, "st": -1.6246877429, "pts_off": -4.7086646246, "pts_def": -0.8602074126, "pressure_rate_created": -0.0116163647, "qb_epa_value": -0.0175103831, "qbr": 48.997877663, "roster_off": 11.9264, "roster_def": 10.798, "injured_value": 3.12585, "espn_off_proj": 63.78189543, "qb": "Malik Willis", "key_players": "Austin Jackson (OL), Jordyn Brooks (LB), Kadyn Proctor (OL)", "record": "1-7", "off_epa_rank": 25, "def_epa_rank": 29, "st_rank": 27, "qb_epa_value_rank": 22, "roster_off_rank": 31, "roster_def_rank": 31}, {"team": "LV", "rank": 31, "power": -7.8134811464, "off_epa": -0.0753975355, "def_epa": -0.1088110765, "pass_off": -0.052798819, "rush_off": -0.0868153458, "pass_def": -0.1784408594, "rush_def": -0.0351795525, "st": -0.2024501755, "pts_off": 0.1127033539, "pts_def": -5.1328183786, "pressure_rate_created": 0.0087666232, "qb_epa_value": -0.08, "qbr": 40.0, "roster_off": 17.4874375, "roster_def": 27.675, "injured_value": 0.0765625, "espn_off_proj": 65.77361403, "qb": "Fernando Mendoza", "key_players": "Maxx Crosby (DL), Kolton Miller (OL), Jeremy Chinn (DB)", "record": "4-5", "off_epa_rank": 26, "def_epa_rank": 30, "st_rank": 17, "qb_epa_value_rank": 31, "roster_off_rank": 25, "roster_def_rank": 16}, {"team": "TEN", "rank": 32, "power": -8.7806524377, "off_epa": -0.1204649801, "def_epa": -0.1215398598, "pass_off": -0.1692986627, "rush_off": -0.0391940123, "pass_def": -0.1565772078, "rush_def": -0.0484317665, "st": -0.6201710384, "pts_off": -4.1591907315, "pts_def": -3.0276497769, "pressure_rate_created": -0.0137604942, "qb_epa_value": -0.1008282275, "qbr": 40.1922186197, "roster_off": 20.161875, "roster_def": 8.2645, "injured_value": 7.842625, "espn_off_proj": 63.38307418, "qb": "Cam Ward", "key_players": "Dan Moore Jr. (OL), Calvin Ridley (WR), JC Latham (OL)", "record": "1-7", "off_epa_rank": 29, "def_epa_rank": 31, "st_rank": 20, "qb_epa_value_rank": 32, "roster_off_rank": 22, "roster_def_rank": 32}]}, "live": {}, "champion": {"margin": "ensemble_espn", "total": "expanded_linear"}, "holdout": [{"model": "baseline_linear", "games": 707, "margin_mae": 10.1811, "total_mae": 10.3913, "market_margin_mae": 9.6407, "market_total_mae": 10.1839}, {"model": "expanded_linear", "games": 707, "margin_mae": 9.9076, "total_mae": 10.2939, "market_margin_mae": 9.6407, "market_total_mae": 10.1839}, {"model": "expanded_gbm", "games": 707, "margin_mae": 9.897, "total_mae": 10.373, "market_margin_mae": 9.6407, "market_total_mae": 10.1839}, {"model": "ensemble", "games": 707, "margin_mae": 9.8797, "total_mae": 10.3226, "market_margin_mae": 9.6407, "market_total_mae": 10.1839}, {"model": "full_linear", "games": 707, "margin_mae": 9.9016, "total_mae": 10.2939, "market_margin_mae": 9.6407, "market_total_mae": 10.1839}, {"model": "ensemble_espn", "games": 707, "margin_mae": 9.8126, "total_mae": 10.3006, "market_margin_mae": 9.6407, "market_total_mae": 10.1839}], "seasons": [{"season": 2012, "model": 10.92, "market": 10.72}, {"season": 2013, "model": 9.79, "market": 9.81}, {"season": 2014, "model": 11.4, "market": 11.28}, {"season": 2015, "model": 10.33, "market": 10.12}, {"season": 2016, "model": 9.23, "market": 9.04}, {"season": 2017, "model": 10.28, "market": 10.08}, {"season": 2018, "model": 9.98, "market": 9.87}, {"season": 2019, "model": 10.42, "market": 10.18}, {"season": 2020, "model": 9.88, "market": 9.79}, {"season": 2021, "model": 10.7, "market": 10.67}, {"season": 2022, "model": 9.08, "market": 8.78}, {"season": 2023, "model": 10.39, "market": 9.98}, {"season": 2024, "model": 9.77, "market": 9.7}, {"season": 2025, "model": 9.93, "market": 9.67}, {"season": 2026, "model": 9.65, "market": 9.45}]}</script>
+<script>
+const D = JSON.parse(document.getElementById('data').textContent);
+const T = { // name, primary, text, bright accent (for bars on dark)
+ ARI:["Cardinals","#97233F","#fff","#e0425f"],ATL:["Falcons","#A71930","#fff","#e8344a"],BAL:["Ravens","#241773","#fff","#8a73ff"],BUF:["Bills","#00338D","#fff","#4a86ff"],
+ CAR:["Panthers","#0085CA","#fff","#26aef0"],CHI:["Bears","#0B162A","#fff","#ff6a2b"],CIN:["Bengals","#FB4F14","#fff","#ff7a45"],CLE:["Browns","#311D00","#fff","#ff6a2b"],
+ DAL:["Cowboys","#003594","#fff","#5b8cff"],DEN:["Broncos","#FB4F14","#fff","#ff7a45"],DET:["Lions","#0076B6","#fff","#3fb2f0"],GB:["Packers","#203731","#FFB612","#ffc23d"],
+ HOU:["Texans","#03202F","#fff","#e4364d"],IND:["Colts","#002C5F","#fff","#5a9bff"],JAX:["Jaguars","#006778","#fff","#25c0d6"],KC:["Chiefs","#E31837","#fff","#ff4d63"],
+ LA:["Rams","#003594","#FFD100","#ffc81e"],LAC:["Chargers","#0080C6","#FFC20E","#3fb2ff"],LV:["Raiders","#000000","#fff","#b9c0c4"],MIA:["Dolphins","#008E97","#fff","#24d0d8"],
+ MIN:["Vikings","#4F2683","#FFC62F","#a477ff"],NE:["Patriots","#002244","#fff","#e8364f"],NO:["Saints","#D3BC8D","#101820","#e3c88d"],NYG:["Giants","#0B2265","#fff","#4f74ff"],
+ NYJ:["Jets","#125740","#fff","#2fbf85"],PHI:["Eagles","#004C54","#fff","#22b2b8"],PIT:["Steelers","#FFB612","#101820","#ffc23d"],SEA:["Seahawks","#002244","#69BE28","#69BE28"],
+ SF:["49ers","#AA0000","#fff","#ff4040"],TB:["Buccaneers","#D50A0A","#fff","#ff4646"],TEN:["Titans","#0C2340","#4B92DB","#4B92DB"],WAS:["Commanders","#5A1414","#FFB612","#ffb612"]};
+const ESPN_ABBR = {WSH:"WAS",LAR:"LA"};
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const n = (x, d=1) => (x==null || isNaN(x)) ? "–" : Number(x).toFixed(d);
+const sgn = (x, d=1) => (x==null || isNaN(x)) ? "–" : (x>0?"+":x<0?"−":"") + Math.abs(x).toFixed(d);
+const team = a => T[a] || [a, "#444", "#fff", "#999"];
+const badge = (a, sm) => `<span class="badge${sm?" sm":""}" style="background:${team(a)[1]};color:${team(a)[2]}">${esc(a)}</span>`;
+const fav = (homeMargin, home, away) => homeMargin==null||isNaN(homeMargin) ? "–" : Math.abs(homeMargin) < 0.05 ? "PK" : `${homeMargin>0?home:away} −${Math.abs(homeMargin).toFixed(1)}`;
+let LIVE = {};
+
+/* ---------- theme ---------- */
+(function(){ let t=null; try{t=localStorage.getItem("sideline-theme")}catch(e){} if(t) document.documentElement.dataset.theme=t;
+ $("#theme").onclick=()=>{const cur=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");
+   const nx=cur==="light"?"dark":"light"; document.documentElement.dataset.theme=nx; try{localStorage.setItem("sideline-theme",nx)}catch(e){} drawScatter(); drawSeasons();}; })();
+
+/* ---------- tabs ---------- */
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x===b));
+  ["slate","rank","record","method"].forEach(id => $("#"+id).hidden = id !== b.dataset.t);
+  if (b.dataset.t==="rank") drawScatter(); if (b.dataset.t==="record") drawSeasons();
+});
+
+/* ---------- header, hero ---------- */
+$("#weekpill").textContent = D.week ? `${D.season} · Week ${D.week}` : `${D.season}`;
+$("#updpill").textContent = `Updated ${D.updated}`;
+$("#seasonlbl").textContent = D.week ? `${D.season} season, week ${D.week}` : `${D.season} season`;
+$("#foot").textContent = `Updated ${D.updated} · spread model: ${D.champion.margin||"–"} · totals: ${D.champion.total||"–"}`;
+const G = D.games.map(g => ({...g, hm:-g.model_spread, mm:-g.market_spread, edge:g.spread_edge}));
+function spotlight(){
+  const pool = G.filter(g => g.result==null && g.edge!=null && !isNaN(g.edge));
+  const g = (pool.length?pool:G).slice().sort((a,b)=>Math.abs(b.edge)-Math.abs(a.edge))[0];
+  if(!g){ $("#spot").innerHTML = `<div class="lbl">No games this week</div>`; return; }
+  const side = g.edge>0 ? g.home : g.away;
+  $("#spot").innerHTML = `<div class="lbl">Biggest disagreement this week</div>
+   <div class="mu">${badge(g.away)} ${esc(team(g.away)[0])} <small>at</small> ${badge(g.home)} ${esc(team(g.home)[0])}</div>
+   <div class="trio"><div><small>Model</small><b>${fav(g.hm,g.home,g.away)}</b></div><div><small>Market</small><b>${fav(g.mm,g.home,g.away)}</b></div>
+   <div style="border-color:color-mix(in srgb,var(--amber) 40%,transparent)"><small>Edge</small><b style="color:var(--amber)">${n(Math.abs(g.edge))}</b> <span style="color:var(--ink2);font:600 12px var(--body)">${esc(side)}</span></div></div>`;
+}
+function tiles(){
+  const top = D.ratings ? D.ratings.teams[0] : null;
+  const ens = (D.holdout||[]).find(h=>h.model===D.champion.margin);
+  const big = G.filter(g=>Math.abs(g.edge)>=3).length;
+  $("#tiles").innerHTML = [
+    ["Games this week", G.length, `${big} with a 3+ point edge`],
+    ["No. 1 in power", top?`${top.team} ${sgn(top.power)}`:"–", top?`${team(top.team)[0]} · ${esc(top.record||"")}`:""],
+    ["Model miss, 2024–now", ens?n(ens.margin_mae,2):"–", ens?`vs ${n(ens.market_margin_mae,2)} for the closing line`:""],
+    ["Live record", D.live.games?`${D.live.ats_w}-${D.live.ats_l}`:"Starts now", D.live.games?`vs closing spread · ${D.live.games} games`:"first graded games this week"],
+  ].map(([s,b,sp])=>`<div class="tile"><small>${s}</small><b>${b}</b><span>${sp}</span></div>`).join("");
+}
+function ticker(){
+  const items = G.map(g=>`<span class="tk">${badge(g.away,1)}<b>${esc(g.away)}</b> @ <b>${esc(g.home)}</b>${badge(g.home,1)} model <b class="num">${fav(g.hm,g.home,g.away)}</b> · mkt <span class="num">${fav(g.mm,g.home,g.away)}</span>${Math.abs(g.edge)>=3?` · <span class="e">edge ${n(Math.abs(g.edge))}</span>`:""}</span>`).join("");
+  $("#ticker").innerHTML = items + items;
+}
+
+/* ---------- slate ---------- */
+let filt="all", sortBy="kick";
+document.querySelectorAll("#filters .chip[data-f]").forEach(c=>c.onclick=()=>{filt=c.dataset.f;document.querySelectorAll("#filters .chip[data-f]").forEach(x=>x.classList.toggle("on",x===c));slate()});
+$("#sort").onchange = e => { sortBy = e.target.value; slate(); };
+
+function gauge(g){
+  const W=320, M=16, R=17, x=v=>M+(Math.max(-R,Math.min(R,v))+R)/(2*R)*(W-2*M);
+  const ticks=[-14,-10,-7,-3,0,3,7,10,14].map(t=>`<line x1="${x(t)}" x2="${x(t)}" y1="${t===0?8:13}" y2="${t===0?32:27}" stroke="var(--line2)" stroke-width="${t===0?1.5:1}"/>
+    <text x="${x(t)}" y="42" text-anchor="middle" font-size="8.5" fill="var(--mute)" font-family="JetBrains Mono">${Math.abs(t)}</text>`).join("");
+  const hasM = g.mm!=null && !isNaN(g.mm);
+  const a=x(g.hm), b=hasM?x(g.mm):a;
+  return `<svg viewBox="0 0 ${W} 44" role="img" aria-label="Model line versus market line">
+    <rect x="${M}" y="18" width="${W-2*M}" height="4" rx="2" fill="var(--panel2)"/>${ticks}
+    ${hasM?`<rect x="${Math.min(a,b)}" y="17" width="${Math.abs(a-b)}" height="6" rx="3" fill="var(--amber)" opacity=".55"/>
+    <circle cx="${b}" cy="20" r="6.5" fill="var(--bg2)" stroke="var(--ink2)" stroke-width="2"/>`:""}
+    <circle cx="${a}" cy="20" r="7" fill="var(--turf)" stroke="var(--bg2)" stroke-width="2"/></svg>`;
+}
+function liveFor(g){ return LIVE[g.away+"@"+g.home]; }
+function card(g){
+  const [hn,hc,,hb]=team(g.home), [an,ac,,ab]=team(g.away);
+  const L=liveFor(g), final = g.result!=null || (L && L.state==="post");
+  const hs = g.home_score ?? (L?L.home:null), as = g.away_score ?? (L?L.away:null);
+  const showScore = hs!=null && as!=null && (final || (L && L.state==="in"));
+  let status = `${new Date(g.gameday+"T12:00").toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})} · ${esc(g.kickoff_et||"")} ET`;
+  let st = "";
+  if (L && L.state==="in") st = `<span class="st" style="color:var(--red)"><span class="live-dot"></span>${esc(L.detail)}</span>`;
+  else if (final) st = `<span class="st" style="color:var(--ink2)">Final</span>`;
+  else if (g.temp!=null && !isNaN(g.temp)) st = `<span>${Math.round(g.temp)}°F · ${Math.round(g.wind)} mph</span>`;
+  const wpH = Math.round(g.home_win_prob*100), wpA = 100-wpH;
+  const e = Math.abs(g.edge), side = g.edge>0?g.home:g.away, hot = e>=3;
+  const te = g.total_edge, lean = te==null||isNaN(te)?"":te>0?"over":"under";
+  let cover = "";
+  if (showScore && g.mm!=null && !isNaN(g.mm)) {
+    const ats = (hs-as) - g.mm; // > 0 home covering
+    const pick = g.edge>0 ? 1 : -1;
+    cover = ats===0 ? `<span class="tag">Push vs market</span>` : `<span class="tag ${Math.sign(ats)===pick?"good":"warn"}">${Math.sign(ats)===pick?"Model side covering":"Model side not covering"}${final?" (final)":""}</span>`;
+  }
+  const tags = [
+    g.away_qb_not_regular?`<span class="tag warn">${esc(g.away)} backup QB</span>`:"",
+    g.home_qb_not_regular?`<span class="tag warn">${esc(g.home)} backup QB</span>`:"",
+    `<span class="tag" title="ESPN Total QBR rating of the starters">QBR ${n(g.away_qbr,0)} · ${n(g.home_qbr,0)}</span>`,
+    (g.away_injured_value!=null)?`<span class="tag" title="Contract-rated value of players on the injury report (away · home)">Injured value ${n(g.away_injured_value)} · ${n(g.home_injured_value)}</span>`:"",
+    (g.away_espn_proj!=null&&!isNaN(g.away_espn_proj))?`<span class="tag" title="ESPN projected fantasy points: QB, 2 RB, 3 WR, TE">ESPN proj ${n(g.away_espn_proj,0)} · ${n(g.home_espn_proj,0)}</span>`:"",
+    cover].join("");
+  const row = (a, nm, qb, sc, other) => `<div class="trow">${badge(a)}<div class="tname">${esc(nm)}<small>${esc(qb||"")}</small></div>${showScore?`<div class="score ${sc>other?"win":sc<other?"lose":""}">${sc}</div>`:""}</div>`;
+  return `<article class="card"><div class="strip"><i style="background:${ac}"></i><i style="background:${hc}"></i></div><div class="cardin">
+    <div class="meta"><span>${status}</span>${st}</div>
+    <div class="teams">${row(g.away,an,g.away_qb,as,hs)}${row(g.home,hn,g.home_qb,hs,as)}</div>
+    <div class="wp"><div class="bar"><i style="width:${wpA}%;background:${ab}"></i><i style="width:${wpH}%;background:${hb}"></i></div>
+      <div class="lbls"><span>${esc(g.away)} ${wpA}%</span><span>win probability</span><span>${esc(g.home)} ${wpH}%</span></div></div>
+    <div class="gauge"><div class="gh"><span>← ${esc(g.away)} favored</span><span>${esc(g.home)} favored →</span></div>${gauge(g)}
+      <div class="gf"><span><span style="color:var(--turf)">●</span> Model <b class="num">${fav(g.hm,g.home,g.away)}</b></span><span><span style="color:var(--ink2)">○</span> Market <b class="num">${fav(g.mm,g.home,g.away)}</b></span></div></div>
+    <div class="stats3">
+      <div class="${hot?"edge-hot":""}"><small>Spread edge</small><b>${n(e)}</b> <span>${e<0.05?"":esc(side)}</span></div>
+      <div><small>Total</small><b class="num">${n(g.model_total)}</b> <span>mkt ${n(g.market_total)}</span></div>
+      <div class="${Math.abs(te)>=3?"edge-hot":""}"><small>Total edge</small><b>${n(Math.abs(te))}</b> <span>${lean}</span></div>
+    </div>
+    <div class="tags">${tags}</div></div></article>`;
+}
+function slate(){
+  let g = G.slice();
+  if (filt==="edge") g = g.filter(x=>Math.abs(x.edge)>=3);
+  if (filt==="qb") g = g.filter(x=>x.home_qb_not_regular||x.away_qb_not_regular);
+  if (filt==="live") g = g.filter(x=>x.result!=null||liveFor(x));
+  const kick = x => (x.gameday||"")+(x.kickoff_et||"");
+  g.sort(sortBy==="edge"?(a,b)=>Math.abs(b.edge)-Math.abs(a.edge):sortBy==="close"?(a,b)=>Math.abs(a.hm)-Math.abs(b.hm):sortBy==="total"?(a,b)=>Math.abs(b.total_edge)-Math.abs(a.total_edge):(a,b)=>kick(a)<kick(b)?-1:1);
+  $("#games").innerHTML = g.length ? g.map(card).join("") : `<div class="empty">No games match this filter.</div>`;
+}
+
+/* ---------- rankings ---------- */
+function rankings(){
+  const R = D.ratings; if(!R){ $("#ranklist").innerHTML = `<div class="empty">No ratings yet.</div>`; return; }
+  $("#ranksub").textContent = `Before week ${R.week}. Power = points better than an average team on a neutral field, with each team's current QB, injuries and roster.`;
+  const mx = Math.max(...R.teams.map(t=>Math.abs(t.power)));
+  const rp = (lbl,r)=>`<span class="rp ${r<=8?"t":r>=25?"b":""}" title="${lbl} rank">${lbl} ${r}</span>`;
+  const unit = (lbl,v,scale,dec=3)=>{ const w=Math.min(50,Math.abs(v)/scale*50); return `<div class="unit"><span>${lbl}</span><span class="ub"><i style="left:${v>=0?50:50-w}%;width:${w}%;background:${v>=0?"var(--turf)":"var(--red)"}"></i></span><span class="v">${sgn(v,dec)}</span></div>`; };
+  $("#ranklist").innerHTML = R.teams.map(t=>{
+    const w = Math.abs(t.power)/mx*50, c = team(t.team)[3];
+    return `<div class="rk" data-t="${esc(t.team)}"><span class="n">${t.rank}</span>${badge(t.team,1)}
+      <div class="nm">${esc(team(t.team)[0])}<small>${esc(t.record||"")} · ${esc(t.qb||"")}</small></div>
+      <div class="pbar"><span class="z"></span><span class="f" style="left:${t.power>=0?50:50-w}%;width:${w}%;background:${c}"></span></div>
+      <div style="display:grid;gap:4px;justify-items:end"><span class="pval">${sgn(t.power)}</span><span class="ranks">${rp("O",t.off_epa_rank)}${rp("D",t.def_epa_rank)}</span></div></div>
+      <div class="detail" id="d-${esc(t.team)}">
+        <div class="units">${unit("Pass off",t.pass_off,.25)}${unit("Pass def",t.pass_def,.25)}${unit("Rush off",t.rush_off,.15)}${unit("Rush def",t.rush_def,.15)}${unit("Spec. teams",t.st,4,1)}${unit("QB EPA",t.qb_epa_value,.2)}</div>
+        <div class="kp"><b>QB</b> ${esc(t.qb||"–")} · QBR ${n(t.qbr,0)} · rank ${t.qb_epa_value_rank??"–"} &nbsp;|&nbsp; <b>Roster</b> off ${n(t.roster_off)} (#${t.roster_off_rank??"–"}) · def ${n(t.roster_def)} (#${t.roster_def_rank??"–"}) · injured ${n(t.injured_value)}</div>
+        <div class="kp" style="margin-top:6px"><b>Key players</b> ${esc(t.key_players||"–")}</div></div>`;}).join("");
+  document.querySelectorAll(".rk").forEach(r=>r.onclick=()=>{ const d=$("#d-"+r.dataset.t); const open=!d.classList.contains("show"); d.classList.toggle("show",open); r.classList.toggle("open",open); });
+}
+function drawScatter(){
+  const R = D.ratings; if(!R || $("#rank").hidden) return;
+  const W=560,H=500,P=40, xs=R.teams.map(t=>t.off_epa), ys=R.teams.map(t=>t.def_epa);
+  const ex=Math.max(...xs.map(Math.abs))*1.15, ey=Math.max(...ys.map(Math.abs))*1.15;
+  const X=v=>P+(v+ex)/(2*ex)*(W-2*P), Y=v=>H-P-(v+ey)/(2*ey)*(H-2*P);
+  const q=(x,y,a,t)=>`<text x="${x}" y="${y}" text-anchor="${a}" font-size="11" font-weight="700" letter-spacing="1.5" fill="var(--mute)" font-family="Barlow Condensed">${t}</text>`;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Offense versus defense ratings for all 32 teams">
+   <rect x="${X(0)}" y="${P}" width="${W-P-X(0)}" height="${Y(0)-P}" fill="var(--turf-d)" rx="6"/>
+   <line x1="${P}" x2="${W-P}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--line2)"/><line x1="${X(0)}" x2="${X(0)}" y1="${P}" y2="${H-P}" stroke="var(--line2)"/>
+   ${q(W-P,P-10,"end","GOOD BOTH WAYS ↗")}${q(P,P-10,"start","↖ DEFENSE-LED")}${q(W-P,H-P+16,"end","OFFENSE-LED ↘")}${q(P,H-P+16,"start","↙ STRUGGLING")}
+   <text x="${W/2}" y="${H-4}" text-anchor="middle" font-size="10.5" fill="var(--mute)">Offense EPA/play →</text>
+   <text x="12" y="${H/2}" text-anchor="middle" font-size="10.5" fill="var(--mute)" transform="rotate(-90 12 ${H/2})">Defense EPA/play (flipped) →</text>`;
+  R.teams.slice().reverse().forEach(t=>{ const [nm,c,tx]=team(t.team);
+    s+=`<g><title>${nm}: offense ${sgn(t.off_epa,3)}, defense ${sgn(t.def_epa,3)}, power ${sgn(t.power)}</title>
+      <circle cx="${X(t.off_epa)}" cy="${Y(t.def_epa)}" r="12" fill="${c}" stroke="var(--panel)" stroke-width="1.5" opacity=".95"/>
+      <text x="${X(t.off_epa)}" y="${Y(t.def_epa)+3.2}" text-anchor="middle" font-size="8.5" font-weight="800" fill="${tx}" font-family="Barlow Condensed">${t.team}</text></g>`; });
+  $("#scatter").innerHTML = s + "</svg>";
+}
+
+/* ---------- record ---------- */
+function record(){
+  const L=D.live;
+  $("#livetiles").innerHTML = (L.games ? [
+    ["Live games graded", L.games, "predictions saved before kickoff"],
+    ["Average miss", n(L.model_mae,2), `closing line: ${n(L.market_mae,2)}`],
+    ["Winners picked", (L.su*100).toFixed(1)+"%", "straight up"],
+    ["Against the spread", `${L.ats_w}-${L.ats_l}`, "vs closing line, every game"]] : [
+    ["Live record", "–", "the first graded games land after this week"],
+    ["Backtest games", (D.seasons||[]).length?"3,966":"–", "2012–now, walk-forward"],
+    ["Model miss", (()=>{const h=(D.holdout||[]).find(h=>h.model===D.champion.margin);return h?n(h.margin_mae,2):"–"})(), "points per game, 2024–now"],
+    ["Closing line miss", (()=>{const h=(D.holdout||[]).find(h=>h.model===D.champion.margin);return h?n(h.market_margin_mae,2):"–"})(), "same games"]]
+  ).map(([s,b,sp])=>`<div class="tile"><small>${s}</small><b>${b}</b><span>${sp}</span></div>`).join("");
+  const H = (D.holdout||[]).slice().sort((a,b)=>a.margin_mae-b.margin_mae);
+  $("#models").innerHTML = `<thead><tr><th class="l">Model</th><th>Games</th><th>Spread miss</th><th>Line miss</th><th>Total miss</th><th>Line total miss</th></tr></thead><tbody>` +
+    H.map(h=>`<tr class="${h.model===D.champion.margin?"champ":""}"><td class="l">${esc(h.model)}${h.model===D.champion.margin?" ★":""}</td><td>${h.games}</td><td>${n(h.margin_mae,2)}</td><td>${n(h.market_margin_mae,2)}</td><td>${n(h.total_mae,2)}</td><td>${n(h.market_total_mae,2)}</td></tr>`).join("") + "</tbody>";
+}
+function drawSeasons(){
+  const S=D.seasons||[]; if(!S.length || $("#record").hidden) return;
+  const W=900,H=240,P=36, lo=Math.min(...S.flatMap(s=>[s.model,s.market]))-.3, hi=Math.max(...S.flatMap(s=>[s.model,s.market]))+.3;
+  const X=i=>P+i*(W-2*P)/(S.length-1), Y=v=>H-P-(v-lo)/(hi-lo)*(H-2*P);
+  const line=(k,c,dash)=>`<polyline fill="none" stroke="${c}" stroke-width="2.5" ${dash?'stroke-dasharray="5 5"':""} points="${S.map((s,i)=>X(i)+","+Y(s[k])).join(" ")}"/>`+S.map((s,i)=>`<circle cx="${X(i)}" cy="${Y(s[k])}" r="3.5" fill="${c}"><title>${s.season}: ${k} ${s[k]}</title></circle>`).join("");
+  let g=""; for(let v=Math.ceil(lo*2)/2; v<=hi; v+=.5) g+=`<line x1="${P}" x2="${W-P}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${P-8}" y="${Y(v)+3}" text-anchor="end" font-size="10" fill="var(--mute)" font-family="JetBrains Mono">${v.toFixed(1)}</text>`;
+  const xl=S.map((s,i)=>`<text x="${X(i)}" y="${H-12}" text-anchor="middle" font-size="10" fill="var(--mute)" font-family="JetBrains Mono">${String(s.season).slice(2)}</text>`).join("");
+  $("#seasonchart").innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Average miss by season, model versus closing line">${g}${xl}${line("market","var(--ink2)",1)}${line("model","var(--turf)")}
+    <g font-size="11" font-family="Inter"><circle cx="${W-260}" cy="14" r="4" fill="var(--turf)"/><text x="${W-250}" y="18" fill="var(--ink2)">Model (live spread model)</text>
+    <circle cx="${W-80}" cy="14" r="4" fill="var(--ink2)"/><text x="${W-70}" y="18" fill="var(--ink2)">Vegas line</text></g></svg>`;
+}
+
+/* ---------- live scores (ESPN public scoreboard) ---------- */
+async function live(){
+  try{
+    const r = await fetch("https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard", {cache:"no-store"});
+    if(!r.ok) return; const j = await r.json(); const out={};
+    for (const ev of j.events||[]) { const c=ev.competitions?.[0]; if(!c) continue;
+      const h=c.competitors.find(x=>x.homeAway==="home"), a=c.competitors.find(x=>x.homeAway==="away");
+      const ab=x=>ESPN_ABBR[x.team.abbreviation]||x.team.abbreviation;
+      out[ab(a)+"@"+ab(h)] = {home:+h.score, away:+a.score, state:ev.status.type.state, detail:ev.status.type.shortDetail}; }
+    LIVE = out; slate();
+  }catch(e){ /* offline or blocked: page still works */ }
+}
+
+spotlight(); tiles(); ticker(); slate(); rankings(); record();
+live(); setInterval(()=>{ if(Object.values(LIVE).some(x=>x.state==="in") || !Object.keys(LIVE).length) live(); }, 30000);
+</script>
+</body>
+</html>
